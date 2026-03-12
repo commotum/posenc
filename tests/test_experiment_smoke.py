@@ -10,7 +10,7 @@ from experiment import enforce_requested_requirements, requirement_report, run_e
 class ExperimentSmokeTests(unittest.TestCase):
     def test_all_encoders_smoke(self) -> None:
         cfg = ExperimentConfig(
-            encoders=("axial", "spiral", "monster", "ape"),
+            encoders=("axial", "spiral", "monster", "f-monster", "ape"),
             dim=120,
             num_vectors=2,
             seed=7,
@@ -18,6 +18,7 @@ class ExperimentSmokeTests(unittest.TestCase):
             coords_spec=parse_coords("t,x,y"),
             num_directions=3,
             top_delta=1024.0,
+            span=2.0 * 3.141592653589793,
             grid_size=3,
             centered_coords=False,
             t_values=parse_t_values("-1,0,1"),
@@ -34,7 +35,7 @@ class ExperimentSmokeTests(unittest.TestCase):
         artifacts = run_experiment(cfg)
         summary = artifacts.summary
 
-        self.assertEqual(summary["encoders"], ["axial", "spiral", "monster", "ape"])
+        self.assertEqual(summary["encoders"], ["axial", "spiral", "monster", "f-monster", "ape"])
         self.assertEqual(summary["positions"]["rope_positions"], 27)
         self.assertEqual(summary["positions"]["monster_positions"], 27)
 
@@ -46,6 +47,7 @@ class ExperimentSmokeTests(unittest.TestCase):
         self.assertLess(verification["axial"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["spiral"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["monster"]["max_abs_minkowski_norm_error"], 1e-10)
+        self.assertLess(verification["f-monster"]["max_abs_minkowski_norm_error"], 1e-10)
         self.assertLess(verification["ape"]["max_abs_broadcast_consistency_error"], 1e-10)
         self.assertGreater(verification["ape"]["mean_pe_norm"], 0.0)
 

@@ -26,7 +26,6 @@ class ParityWithV1Tests(unittest.TestCase):
             "--encoders",
             "axial",
             "spiral",
-            "monster",
             "--dim",
             "120",
             "--num-vectors",
@@ -45,6 +44,7 @@ class ParityWithV1Tests(unittest.TestCase):
 
         old.pop("timing_seconds")
         new.pop("timing_seconds")
+        new["config"].pop("span", None)
         self.assertEqual(new, old)
 
 

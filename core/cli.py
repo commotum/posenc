@@ -18,6 +18,7 @@ DEFAULTS: dict[str, Any] = {
     "coords": "x,y",
     "num_directions": None,
     "top_delta": 1024.0,
+    "span": 2.0 * 3.141592653589793,
     "grid_size": 16,
     "centered_coords": False,
     "t_values": "0",
@@ -36,6 +37,7 @@ COMMON_CONFIG_KEYS = {
     "coords",
     "num_directions",
     "top_delta",
+    "span",
     "grid_size",
     "centered_coords",
     "t_values",
@@ -184,6 +186,12 @@ def build_parser(defaults: dict[str, Any]) -> argparse.ArgumentParser:
         help="MonSTER top_delta denominator.",
     )
     parser.add_argument(
+        "--span",
+        type=float,
+        default=defaults["span"],
+        help="Angular span used by MonSTER-family encoders; unit = span / top_delta.",
+    )
+    parser.add_argument(
         "--grid-size",
         type=int,
         default=defaults["grid_size"],
@@ -252,6 +260,8 @@ def parse_args() -> tuple[ExperimentConfig, dict[str, Any]]:
         parser.error("--grid-size must be positive.")
     if args.top_delta <= 0:
         parser.error("--top-delta must be positive.")
+    if args.span <= 0:
+        parser.error("--span must be positive.")
 
     try:
         coord_spec = parse_coords(args.coords)
@@ -284,6 +294,7 @@ def parse_args() -> tuple[ExperimentConfig, dict[str, Any]]:
         coords_spec=coord_spec,
         num_directions=num_directions,
         top_delta=args.top_delta,
+        span=args.span,
         grid_size=args.grid_size,
         centered_coords=bool(args.centered_coords),
         t_values=t_values,

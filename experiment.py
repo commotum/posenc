@@ -84,6 +84,7 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentArtifacts:
             "include_time": bool(cfg.coords_spec.include_time),
             "num_directions": cfg.num_directions,
             "top_delta": cfg.top_delta,
+            "span": cfg.span,
             "grid_size": cfg.grid_size,
             "centered_coords": bool(cfg.centered_coords),
             "t_values": cfg.t_values.tolist(),

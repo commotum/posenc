@@ -17,7 +17,8 @@ This is experiment infrastructure, not model training/inference code.
 
 - `axial`: Multi-axis rotary encoding (RoPE-like), independent rotations per coordinate axis/frequency pair.
 - `spiral`: Rotary encoding on projected coordinate directions (mixed/orthogonal direction vectors).
-- `monster`: Spacetime-inspired transform (hyperbolic time-like boost + spatial rotations), with Minkowski-form check.
+- `monster`: Triad MonSTER transform over 12D blocks (boost + axis-plane rotations), with Minkowski-form check.
+- `f-monster`: Fibonacci-axis MonSTER over 4D blocks (boost + rotation around isotropic per-block axes), with Minkowski-form check.
 - `ape`: Fixed sinusoidal Absolute Positional Encoding (Transformer-style `sin`/`cos`) added to vectors.
 
 ## Current architecture
@@ -34,7 +35,7 @@ This is experiment infrastructure, not model training/inference code.
 - Encoders:
   - `encoders/common.py` (encoder interface)
   - `encoders/registry.py` (explicit registry)
-  - `encoders/{axial,spiral,monster,ape}.py`
+  - `encoders/{axial,spiral,monster,f_monster,ape}.py`
   - `encoders/template.py` (new-encoder template)
 - Analysis space: `analysis/`
 - Regression baselines: `baselines/`
@@ -69,6 +70,12 @@ Save outputs:
 
 ```bash
 uv run python main.py --encoders axial spiral monster ape --save-dir out --save-encoded
+```
+
+MonSTER-family with span scaling (`unit = span / top_delta`):
+
+```bash
+uv run python main.py --encoders monster f-monster --dim 120 --span 6.283185307179586 --top-delta 1024
 ```
 
 Run tests:

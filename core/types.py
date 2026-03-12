@@ -7,8 +7,7 @@ from typing import Any
 import numpy as np
 
 
-MONSTER_SLICE = 12
-ENCODER_NAMES = ("axial", "spiral", "monster", "ape")
+ENCODER_NAMES = ("axial", "spiral", "monster", "f-monster", "ape")
 ALLOWED_COORDS = ("t", "x", "y", "z")
 
 
@@ -45,6 +44,7 @@ class ExperimentConfig:
     coords_spec: CoordinateSpec
     num_directions: int
     top_delta: float
+    span: float
     grid_size: int
     centered_coords: bool
     t_values: np.ndarray
