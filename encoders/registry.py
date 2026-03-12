@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from encoders.ape import SPEC as APE_SPEC
 from encoders.axial import SPEC as AXIAL_SPEC
 from encoders.common import EncoderSpec
 from encoders.monster import SPEC as MONSTER_SPEC
@@ -9,6 +10,7 @@ _REGISTRY: dict[str, EncoderSpec] = {
     AXIAL_SPEC.name: AXIAL_SPEC,
     SPIRAL_SPEC.name: SPIRAL_SPEC,
     MONSTER_SPEC.name: MONSTER_SPEC,
+    APE_SPEC.name: APE_SPEC,
 }
 
 

@@ -10,7 +10,7 @@ from experiment import enforce_requested_requirements, requirement_report, run_e
 class ExperimentSmokeTests(unittest.TestCase):
     def test_all_encoders_smoke(self) -> None:
         cfg = ExperimentConfig(
-            encoders=("axial", "spiral", "monster"),
+            encoders=("axial", "spiral", "monster", "ape"),
             dim=120,
             num_vectors=2,
             seed=7,
@@ -34,7 +34,7 @@ class ExperimentSmokeTests(unittest.TestCase):
         artifacts = run_experiment(cfg)
         summary = artifacts.summary
 
-        self.assertEqual(summary["encoders"], ["axial", "spiral", "monster"])
+        self.assertEqual(summary["encoders"], ["axial", "spiral", "monster", "ape"])
         self.assertEqual(summary["positions"]["rope_positions"], 27)
         self.assertEqual(summary["positions"]["monster_positions"], 27)
 
@@ -46,6 +46,8 @@ class ExperimentSmokeTests(unittest.TestCase):
         self.assertLess(verification["axial"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["spiral"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["monster"]["max_abs_minkowski_norm_error"], 1e-10)
+        self.assertLess(verification["ape"]["max_abs_broadcast_consistency_error"], 1e-10)
+        self.assertGreater(verification["ape"]["mean_pe_norm"], 0.0)
 
 
 if __name__ == "__main__":

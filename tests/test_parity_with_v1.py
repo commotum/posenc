@@ -24,7 +24,9 @@ class ParityWithV1Tests(unittest.TestCase):
     def test_refactor_matches_original_summary(self) -> None:
         args = [
             "--encoders",
-            "all",
+            "axial",
+            "spiral",
+            "monster",
             "--dim",
             "120",
             "--num-vectors",

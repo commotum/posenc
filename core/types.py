@@ -8,7 +8,7 @@ import numpy as np
 
 
 MONSTER_SLICE = 12
-ENCODER_NAMES = ("axial", "spiral", "monster")
+ENCODER_NAMES = ("axial", "spiral", "monster", "ape")
 ALLOWED_COORDS = ("t", "x", "y", "z")
 
 
