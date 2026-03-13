@@ -147,9 +147,9 @@ def apply_monster_fibonacci_fast_vec(emb: np.ndarray, tables: dict, dim: int = 7
     t = out[:, 0]        # (F,)
     spatial = out[:, 1:] # (F,3)
 
-    # --------------------
+    # ----------------------------------------------------
     # Step 1: Boost along each block's own Fibonacci axis
-    # --------------------
+    # ----------------------------------------------------
     proj = np.sum(spatial * axis, axis=-1)  # (F,) = a · x
 
     t1 = ch * t - sh * proj
@@ -157,9 +157,9 @@ def apply_monster_fibonacci_fast_vec(emb: np.ndarray, tables: dict, dim: int = 7
         (((ch - 1.0) * proj - sh * t)[:, None] * axis)
     )
 
-    # --------------------
+    # -----------------------------------------------------
     # Step 2: Rotate the spatial part around the same axis
-    # --------------------
+    # -----------------------------------------------------
     proj1 = np.sum(spatial1 * axis, axis=-1)  # (F,) = a · x'
     cross = np.cross(axis, spatial1)          # (F,3) = a × x'
 
