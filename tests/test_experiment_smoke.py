@@ -10,7 +10,7 @@ from experiment import enforce_requested_requirements, requirement_report, run_e
 class ExperimentSmokeTests(unittest.TestCase):
     def test_all_encoders_smoke(self) -> None:
         cfg = ExperimentConfig(
-            encoders=("axial", "spiral", "monster", "f-monster", "ape"),
+            encoders=("rope", "axial", "spiral", "monster", "f-monster", "ape"),
             dim=120,
             num_vectors=2,
             seed=7,
@@ -35,7 +35,7 @@ class ExperimentSmokeTests(unittest.TestCase):
         artifacts = run_experiment(cfg)
         summary = artifacts.summary
 
-        self.assertEqual(summary["encoders"], ["axial", "spiral", "monster", "f-monster", "ape"])
+        self.assertEqual(summary["encoders"], ["rope", "axial", "spiral", "monster", "f-monster", "ape"])
         self.assertEqual(summary["positions"]["rope_positions"], 27)
         self.assertEqual(summary["positions"]["monster_positions"], 27)
 
@@ -44,6 +44,7 @@ class ExperimentSmokeTests(unittest.TestCase):
             self.assertEqual(str(tensor.dtype), "float64", msg=f"Unexpected dtype for {name}")
 
         verification = summary["verification"]
+        self.assertLess(verification["rope"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["axial"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["spiral"]["max_abs_euclidean_norm_error"], 1e-10)
         self.assertLess(verification["monster"]["max_abs_minkowski_norm_error"], 1e-10)

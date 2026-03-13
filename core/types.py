@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 
-ENCODER_NAMES = ("axial", "spiral", "monster", "f-monster", "ape")
+ENCODER_NAMES = ("rope", "axial", "spiral", "monster", "f-monster", "ape")
 ALLOWED_COORDS = ("t", "x", "y", "z")
 
 

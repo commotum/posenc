@@ -5,9 +5,11 @@ from encoders.axial import SPEC as AXIAL_SPEC
 from encoders.common import EncoderSpec
 from encoders.f_monster import SPEC as F_MONSTER_SPEC
 from encoders.monster import SPEC as MONSTER_SPEC
+from encoders.rope import SPEC as ROPE_SPEC
 from encoders.spiral import SPEC as SPIRAL_SPEC
 
 _REGISTRY: dict[str, EncoderSpec] = {
+    ROPE_SPEC.name: ROPE_SPEC,
     AXIAL_SPEC.name: AXIAL_SPEC,
     SPIRAL_SPEC.name: SPIRAL_SPEC,
     MONSTER_SPEC.name: MONSTER_SPEC,

@@ -15,6 +15,7 @@ This is experiment infrastructure, not model training/inference code.
 
 ## Implemented encoders
 
+- `rope`: Standard 1D sequence RoPE over embedding pairs (single position index per token).
 - `axial`: Multi-axis rotary encoding (RoPE-like), independent rotations per coordinate axis/frequency pair.
 - `spiral`: Rotary encoding on projected coordinate directions (mixed/orthogonal direction vectors).
 - `monster`: Triad MonSTER transform over 12D blocks (boost + axis-plane rotations), with Minkowski-form check.
@@ -35,7 +36,7 @@ This is experiment infrastructure, not model training/inference code.
 - Encoders:
   - `encoders/common.py` (encoder interface)
   - `encoders/registry.py` (explicit registry)
-  - `encoders/{axial,spiral,monster,f_monster,ape}.py`
+  - `encoders/{rope,axial,spiral,monster,f_monster,ape}.py`
   - `encoders/template.py` (new-encoder template)
 - Analysis space: `analysis/`
 - Regression baselines: `baselines/`
