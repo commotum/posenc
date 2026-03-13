@@ -16,8 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from core.types import ExperimentConfig, PositionBank, RequirementCheck
-from encoders.common import EncoderSpec
+from core.types import EncoderSpec, PositionBank, RequirementCheck, RunConfig
 
 
 NAME = "replace_me"
@@ -28,11 +27,11 @@ class Cache:
     example: np.ndarray
 
 
-def validate_config(cfg: ExperimentConfig) -> RequirementCheck:
+def validate_config(cfg: RunConfig) -> RequirementCheck:
     return RequirementCheck(ok=True, rule="define compatibility rule")
 
 
-def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
+def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
     raise NotImplementedError
 
 

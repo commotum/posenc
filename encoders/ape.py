@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from core.types import ExperimentConfig, PositionBank, RequirementCheck
-from encoders.common import EncoderSpec
+from core.math import chunk_slices
+from core.types import EncoderSpec, PositionBank, RequirementCheck, RunConfig
 
 
 NAME = "ape"
@@ -17,12 +17,12 @@ class Cache:
     pe: np.ndarray  # (P, D)
 
 
-def validate_config(cfg: ExperimentConfig) -> RequirementCheck:
+def validate_config(cfg: RunConfig) -> RequirementCheck:
     ok = cfg.dim % 2 == 0
     return RequirementCheck(ok=ok, rule="dim % 2 == 0")
 
 
-def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
+def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
     if cfg.dim % 2 != 0:
         raise ValueError("APE requires dim divisible by 2 for sin/cos pairs.")
 
@@ -40,25 +40,12 @@ def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
     return Cache(positions=bank.rope_positions, pe=pe)
 
 
-def _chunk_slices(total: int, chunk_size: int) -> list[tuple[int, int]]:
-    if chunk_size <= 0 or chunk_size >= total:
-        return [(0, total)]
-
-    slices: list[tuple[int, int]] = []
-    start = 0
-    while start < total:
-        end = min(total, start + chunk_size)
-        slices.append((start, end))
-        start = end
-    return slices
-
-
 def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
     num_vectors, dim = vectors.shape
     num_positions = cache.pe.shape[0]
 
     out = np.empty((num_vectors, num_positions, dim), dtype=np.float64)
-    for start, end in _chunk_slices(num_positions, chunk_size):
+    for start, end in chunk_slices(num_positions, chunk_size):
         out[:, start:end, :] = vectors[:, None, :] + cache.pe[None, start:end, :]
     return out
 

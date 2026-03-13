@@ -4,9 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from core.frequencies import spiral_frequency_sets
-from core.types import ExperimentConfig, PositionBank, RequirementCheck
-from encoders.common import EncoderSpec
+from core.math import chunk_slices, max_abs_euclidean_norm_error, spiral_frequency_sets
+from core.types import EncoderSpec, PositionBank, RequirementCheck, RunConfig
 
 
 NAME = "spiral"
@@ -22,13 +21,29 @@ class Cache:
     sin_phase: np.ndarray  # (P, G, F)
 
 
-def validate_config(cfg: ExperimentConfig) -> RequirementCheck:
-    ok = cfg.num_directions == cfg.coords_spec.rope_dims and cfg.dim % (2 * cfg.num_directions) == 0
+def _num_directions(cfg: RunConfig) -> int:
+    raw = cfg.param(NAME, "num_directions", cfg.coords_spec.rope_dims)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Spiral param 'num_directions' must be an integer.") from exc
+    if value <= 0:
+        raise ValueError("Spiral param 'num_directions' must be positive.")
+    return value
+
+
+def validate_config(cfg: RunConfig) -> RequirementCheck:
+    try:
+        num_directions = _num_directions(cfg)
+    except ValueError as exc:
+        return RequirementCheck(ok=False, rule=str(exc))
+
+    ok = num_directions == cfg.coords_spec.rope_dims and cfg.dim % (2 * num_directions) == 0
     return RequirementCheck(
         ok=ok,
         rule=(
-            "num_directions == len(coords) and dim % (2 * num_directions) == 0; "
-            f"num_directions={cfg.num_directions}"
+            "encoder_params.spiral.num_directions == len(coords) and "
+            f"dim % (2 * num_directions) == 0; num_directions={num_directions}"
         ),
     )
 
@@ -77,13 +92,14 @@ def _direction_vectors(coord_dims: int) -> np.ndarray:
     raise ValueError("This script supports up to 4 coordinates in --coords.")
 
 
-def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
+def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
     rope_positions = bank.rope_positions
     coord_dims = rope_positions.shape[1]
-    if cfg.num_directions != coord_dims:
-        raise ValueError("For this mode, Spiral directions must match coordinate dimensionality.")
+    num_directions = _num_directions(cfg)
+    if num_directions != coord_dims:
+        raise ValueError("Spiral requires num_directions == len(coords).")
 
-    frequency_sets = spiral_frequency_sets(cfg.dim, cfg.num_directions, cfg.theta_base)
+    frequency_sets = spiral_frequency_sets(cfg.dim, num_directions, cfg.theta_base)
     direction_vectors = _direction_vectors(coord_dims)
     projected = rope_positions @ direction_vectors.T
     phase = projected[:, :, None] * frequency_sets[None, :, :]
@@ -97,19 +113,6 @@ def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
     )
 
 
-def _chunk_slices(total: int, chunk_size: int) -> list[tuple[int, int]]:
-    if chunk_size <= 0 or chunk_size >= total:
-        return [(0, total)]
-
-    slices: list[tuple[int, int]] = []
-    start = 0
-    while start < total:
-        end = min(total, start + chunk_size)
-        slices.append((start, end))
-        start = end
-    return slices
-
-
 def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
     num_vectors, dim = vectors.shape
     num_positions = cache.positions.shape[0]
@@ -120,7 +123,7 @@ def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
     g1 = groups[:, :, :, 1]
 
     out = np.empty((num_vectors, num_positions, dim), dtype=np.float64)
-    for start, end in _chunk_slices(num_positions, chunk_size):
+    for start, end in chunk_slices(num_positions, chunk_size):
         cos_phase = cache.cos_phase[start:end][None, :, :, :]
         sin_phase = cache.sin_phase[start:end][None, :, :, :]
 
@@ -131,10 +134,8 @@ def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
 
 
 def check_invariants(vectors: np.ndarray, encoded: np.ndarray) -> dict[str, float]:
-    original_norms = np.linalg.norm(vectors, axis=1)
-    encoded_norms = np.linalg.norm(encoded, axis=2)
     return {
-        "max_abs_euclidean_norm_error": float(np.max(np.abs(encoded_norms - original_norms[:, None]))),
+        "max_abs_euclidean_norm_error": max_abs_euclidean_norm_error(vectors, encoded),
     }
 
 

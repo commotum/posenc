@@ -68,7 +68,7 @@ def build_positions_for_coords(
     return np.stack(mesh, axis=-1).reshape(-1, coord_spec.rope_dims)
 
 
-def build_monster_positions(
+def build_positions_4d(
     coord_spec: CoordinateSpec,
     spatial_values: np.ndarray,
     t_values: np.ndarray,
@@ -92,5 +92,5 @@ def build_position_bank(
 ) -> PositionBank:
     spatial_values = make_spatial_axis_values(grid_size, centered_coords)
     rope_positions = build_positions_for_coords(coord_spec, spatial_values, t_values)
-    monster_positions = build_monster_positions(coord_spec, spatial_values, t_values, z_value)
-    return PositionBank(rope_positions=rope_positions, monster_positions=monster_positions)
+    positions_4d = build_positions_4d(coord_spec, spatial_values, t_values, z_value)
+    return PositionBank(rope_positions=rope_positions, positions_4d=positions_4d)

@@ -4,12 +4,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from core.frequencies import base_frequencies
-from core.types import ExperimentConfig, PositionBank, RequirementCheck
-from encoders.common import EncoderSpec
+from core.math import base_frequencies, chunk_slices, max_abs_minkowski_norm_error
+from core.types import EncoderSpec, PositionBank, RequirementCheck, RunConfig
 
 
 NAME = "monster"
+DEFAULT_TOP_DELTA = 1024.0
+DEFAULT_SPAN = 2.0 * np.pi
 
 
 @dataclass(frozen=True)
@@ -22,19 +23,43 @@ class Cache:
     s_axes: np.ndarray  # (P, F, 3)
 
 
-def validate_config(cfg: ExperimentConfig) -> RequirementCheck:
+def _params(cfg: RunConfig) -> tuple[float, float]:
+    raw_top_delta = cfg.param(NAME, "top_delta", DEFAULT_TOP_DELTA)
+    raw_span = cfg.param(NAME, "span", DEFAULT_SPAN)
+    try:
+        top_delta = float(raw_top_delta)
+        span = float(raw_span)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("MonSTER params 'top_delta' and 'span' must be numeric.") from exc
+    if top_delta <= 0:
+        raise ValueError("MonSTER param 'top_delta' must be positive.")
+    if span <= 0:
+        raise ValueError("MonSTER param 'span' must be positive.")
+    return top_delta, span
+
+
+def validate_config(cfg: RunConfig) -> RequirementCheck:
+    try:
+        top_delta, span = _params(cfg)
+    except ValueError as exc:
+        return RequirementCheck(ok=False, rule=str(exc))
+
     ok = cfg.dim % 12 == 0
-    return RequirementCheck(ok=ok, rule="dim % 12 == 0")
+    return RequirementCheck(
+        ok=ok,
+        rule=f"dim % 12 == 0; top_delta={top_delta}, span={span}",
+    )
 
 
-def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
-    positions_4d = bank.monster_positions
+def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
+    positions_4d = bank.positions_4d
     if cfg.dim % 12 != 0:
         raise ValueError("MonSTER requires dim divisible by 12.")
 
+    top_delta, span = _params(cfg)
     num_freq = cfg.dim // 12
     inv_freq = base_frequencies(num_freq, cfg.theta_base)
-    unit = float(cfg.span) / float(cfg.top_delta)
+    unit = span / top_delta
 
     phi = positions_4d[:, 0:1] * unit * inv_freq[None, :]
     spatial_angles = positions_4d[:, 1:4, None] * unit * inv_freq[None, None, :]  # (P,3,F)
@@ -50,19 +75,6 @@ def precompute(cfg: ExperimentConfig, bank: PositionBank) -> Cache:
     )
 
 
-def _chunk_slices(total: int, chunk_size: int) -> list[tuple[int, int]]:
-    if chunk_size <= 0 or chunk_size >= total:
-        return [(0, total)]
-
-    slices: list[tuple[int, int]] = []
-    start = 0
-    while start < total:
-        end = min(total, start + chunk_size)
-        slices.append((start, end))
-        start = end
-    return slices
-
-
 def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
     num_vectors, dim = vectors.shape
     num_positions = cache.positions.shape[0]
@@ -71,7 +83,7 @@ def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
     base = vectors.reshape(num_vectors, num_freq, 3, 4)
     out = np.empty((num_vectors, num_positions, dim), dtype=np.float64)
 
-    for start, end in _chunk_slices(num_positions, chunk_size):
+    for start, end in chunk_slices(num_positions, chunk_size):
         pos_count = end - start
         state = np.broadcast_to(base[None, :, :, :, :], (pos_count, num_vectors, num_freq, 3, 4)).copy()
 
@@ -106,13 +118,8 @@ def apply(vectors: np.ndarray, cache: Cache, chunk_size: int) -> np.ndarray:
 
 
 def check_invariants(vectors: np.ndarray, encoded: np.ndarray) -> dict[str, float]:
-    eta = np.array([-1.0, 1.0, 1.0, 1.0], dtype=np.float64)
-    original = vectors.reshape(vectors.shape[0], -1, 4)
-    encoded_blocks = encoded.reshape(encoded.shape[0], encoded.shape[1], -1, 4)
-    base_norms = np.sum(original * eta[None, None, :] * original, axis=2)
-    transformed_norms = np.sum(encoded_blocks * eta[None, None, None, :] * encoded_blocks, axis=3)
     return {
-        "max_abs_minkowski_norm_error": float(np.max(np.abs(transformed_norms - base_norms[:, None, :]))),
+        "max_abs_minkowski_norm_error": max_abs_minkowski_norm_error(vectors, encoded),
     }
 
 

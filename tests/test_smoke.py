@@ -3,22 +3,19 @@ from __future__ import annotations
 import unittest
 
 from core.positions import parse_coords, parse_t_values
-from core.types import ExperimentConfig
+from core.types import RunConfig
 from experiment import enforce_requested_requirements, requirement_report, run_experiment
 
 
-class ExperimentSmokeTests(unittest.TestCase):
+class SmokeTests(unittest.TestCase):
     def test_all_encoders_smoke(self) -> None:
-        cfg = ExperimentConfig(
+        cfg = RunConfig(
             encoders=("rope", "axial", "spiral", "monster", "f-monster", "ape"),
             dim=120,
             num_vectors=2,
             seed=7,
             theta_base=10_000.0,
             coords_spec=parse_coords("t,x,y"),
-            num_directions=3,
-            top_delta=1024.0,
-            span=2.0 * 3.141592653589793,
             grid_size=3,
             centered_coords=False,
             t_values=parse_t_values("-1,0,1"),
@@ -26,7 +23,11 @@ class ExperimentSmokeTests(unittest.TestCase):
             position_chunk_size=5,
             save_dir=None,
             save_encoded=False,
-            raw_coords="t,x,y",
+            encoder_params={
+                "spiral": {"num_directions": 3},
+                "monster": {"top_delta": 1024.0, "span": 2.0 * 3.141592653589793},
+                "f-monster": {"top_delta": 1024.0, "span": 2.0 * 3.141592653589793},
+            },
         )
 
         checks = requirement_report(cfg)
@@ -37,7 +38,7 @@ class ExperimentSmokeTests(unittest.TestCase):
 
         self.assertEqual(summary["encoders"], ["rope", "axial", "spiral", "monster", "f-monster", "ape"])
         self.assertEqual(summary["positions"]["rope_positions"], 27)
-        self.assertEqual(summary["positions"]["monster_positions"], 27)
+        self.assertEqual(summary["positions"]["positions_4d"], 27)
 
         for name, tensor in artifacts.encoded.items():
             self.assertEqual(tensor.shape, (2, 27, 120), msg=f"Unexpected shape for {name}")

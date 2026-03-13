@@ -1,73 +1,49 @@
-# Positional Encoding Refactor To-Do
+# PosEnc Cleanup To-Do
 
-## 1) Lock in a baseline before refactor
-- [x] Run the current script with representative settings and save baseline outputs (`metadata.json`, optional encoded tensors).
-- [x] Record baseline invariants and timing values for `axial`, `spiral`, and `monster`.
-- [x] Keep 2-3 canonical CLI invocations to use for regression checks during the refactor.
+## Goal
+Reduce refactor residue while preserving one-file-per-encoder structure and current behavior.
 
-## 2) Create package structure for a plugin-style harness
-- [x] Add folders: `core/`, `encoders/`, `analysis/`.
-- [x] Keep `main.py` as a thin CLI entrypoint.
-- [x] Add `experiment.py` as the orchestrator (`run_experiment(config)`).
-- [x] Add `encoders/registry.py` for explicit encoder registration (no dynamic import magic).
+## Phase 1: Museum Pass
+- [x] Delete `baselines/`
+- [x] Delete `Positional-Encoding-V1.py`
+- [x] Delete `Big-Picture.md`
+- [x] Delete parity test (`tests/test_parity_with_v1.py`)
+- [x] Keep this `To-Do.md` as the only temporary planning artifact
 
-## 3) Move shared utilities out of the monolith
-- [x] Move random vector generation and vector checks into `core/vectors.py`.
-- [x] Move coordinate parsing and position-grid builders into `core/positions.py`.
-- [x] Move shared frequency helpers (e.g., base frequencies) into `core/frequencies.py`.
-- [x] Move save helpers (`vectors.npy`, `metadata.json`, `encoded_*.npy`) into `core/io.py`.
+## Phase 2: Config Simplification
+- [x] Replace `ExperimentConfig` with a single runtime `RunConfig`
+- [x] Add `encoder_params: dict[str, dict[str, Any]]` to runtime config
+- [x] Simplify JSON config loading to one schema (no `common`, no `encoders.names`, no top-level aliases)
+- [x] Keep CLI focused on common fields; encoder-specific values come from `encoder_params`
+- [x] Update encoder modules to read per-encoder params via shared config accessors
 
-## 4) Define shared data contracts
-- [x] Add an `ExperimentConfig` dataclass (common args + encoder options).
-- [x] Add a shared position bank type/object so encoders receive one position payload.
-- [x] Add a requirement-check structure for encoder compatibility reporting.
-- [x] Keep naming split clear: `validate_config` (compatibility) vs `check_invariants` (post-apply correctness).
+## Phase 3: Small-Module Collapse
+- [x] Move `EncoderSpec` into `core/types.py`
+- [x] Make `encoders/__init__.py` the canonical registry (`all_specs`, `get_spec`, `resolve_specs`)
+- [x] Remove `encoders/common.py` and `encoders/registry.py`
+- [x] Add `core/math.py` with shared helpers:
+  - [x] `base_frequencies`
+  - [x] `spiral_frequency_sets`
+  - [x] `chunk_slices`
+  - [x] norm-error helpers
+- [x] Remove duplicated `_chunk_slices` from encoders
+- [x] Inline or eliminate thin IO abstraction if only used once
 
-## 5) Standardize encoder interface
-- [x] Define a single encoder contract each module must expose:
-  - [x] `NAME`
-  - [x] `Cache` dataclass
-  - [x] `validate_config(cfg)`
-  - [x] `precompute(cfg, bank)`
-  - [x] `apply(vectors, cache, chunk_size)`
-  - [x] `check_invariants(vectors, encoded)`
-- [x] Add a code template file for new encoders (code first, markdown checklist second).
+## Phase 4: Naming + Structure Cleanup
+- [x] Rename `PositionBank.monster_positions` to `positions_4d`
+- [x] Stop storing encoder name constants in `core/types.py`; derive names from encoder registry
+- [x] Convert `analysis/` into `notebooks/`
+- [x] Keep one useful notebook: `notebooks/compare.ipynb`
+- [x] Remove package-style `analysis/__init__.py`
 
-## 6) Split current encoders into modules
-- [x] Create `encoders/axial.py` and move axial cache/apply/invariant logic.
-- [x] Create `encoders/spiral.py` and move spiral cache/apply/invariant logic.
-- [x] Create `encoders/monster.py` and move monster cache/apply/invariant logic.
-- [x] Preserve current math exactly during extraction to avoid silent behavior changes.
+## Phase 5: Tests + Docs
+- [x] Keep only parse/validation test and end-to-end smoke test
+- [x] Delete outdated config/parity tests
+- [x] Update README for new config schema and project layout
+- [x] Update `pyproject.toml` description
+- [x] Move notebook-only deps to optional extras
 
-## 7) Rebuild orchestration flow
-- [x] In `experiment.py`, resolve selected encoders from registry.
-- [x] Run per-encoder `validate_config` and fail early with clear messages.
-- [x] Build shared positions once, then call each encoder `precompute`.
-- [x] Apply encoders blockwise and collect outputs in a uniform result object.
-- [x] Run `check_invariants` per encoder and aggregate verification summary.
-- [x] Preserve current summary schema (`encoders`, `config`, `vector_stats`, `positions`, `verification`, `timing_seconds`).
-
-## 8) Keep CLI thin and scalable
-- [x] Keep core/common CLI options in `main.py` (`--dim`, `--coords`, `--encoders`, etc.).
-- [x] Add optional experiment config file support (`--config path`) for encoder-specific overrides.
-- [x] Keep code defaults as source of truth; config files override per run.
-- [x] Avoid turning `main.py` into an encoder-specific flag graveyard.
-
-## 9) Add analysis hooks without coupling to encoding math
-- [ ] Put plotting/analysis helpers (heatmaps, comparisons, diagnostics) in `analysis/`.
-- [x] Ensure analysis consumes experiment outputs instead of touching encoder internals.
-- [x] Make outputs easy to load from notebooks/scripts for follow-up experiments.
-
-## 10) Add regression tests and guardrails
-- [x] Add tests for parser/config validation and coordinate compatibility rules.
-- [x] Add tests that compare refactored outputs to the baseline for fixed seeds/settings.
-- [x] Add invariant tests:
-  - [x] Euclidean norm preservation for `axial` and `spiral`.
-  - [x] Minkowski-form preservation for `monster`.
-- [x] Add shape and dtype tests for caches and encoded outputs.
-- [x] Add one end-to-end smoke test for multi-encoder runs.
-
-## 11) Future-proofing rule for encoder growth
-- [x] Keep one file per encoder by default.
-- [ ] Promote an encoder to its own folder only when complexity warrants it (multiple apply modes, large helpers, custom diagnostics, large constants/presets).
-- [ ] Keep registry-facing API unchanged when promoting file -> folder.
+## Final Validation
+- [x] `uv run python -m unittest discover -s tests -v` passes
+- [x] `uv run python main.py --encoders all --dim 120 --num-vectors 2 --coords t,x,y --t-values=-1,0,1 --grid-size 3` runs successfully
+- [x] Repo tree reflects simplified architecture
