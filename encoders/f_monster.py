@@ -77,7 +77,7 @@ def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
     top_delta, span = _params(cfg)
     num_freq = cfg.dim // 4
     inv_freq = base_frequencies(num_freq, cfg.theta_base)
-    unit = span / top_delta
+    unit = 1.0 # span / top_delta
 
     axis = _fibonacci_sphere(num_freq)  # (F,3)
     t = positions_4d[:, 0:1]  # (P,1)
