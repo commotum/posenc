@@ -9,8 +9,7 @@ from core.types import EncoderSpec, PositionBank, RequirementCheck, RunConfig
 
 
 NAME = "f-monster"
-DEFAULT_TOP_DELTA = 1024.0
-DEFAULT_SPAN = 2.0 * np.pi
+DEFAULT_L = 1.0 / 4096.0
 
 
 @dataclass(frozen=True)
@@ -24,31 +23,27 @@ class Cache:
     s: np.ndarray  # (P, F)
 
 
-def _params(cfg: RunConfig) -> tuple[float, float]:
-    raw_top_delta = cfg.param(NAME, "top_delta", DEFAULT_TOP_DELTA)
-    raw_span = cfg.param(NAME, "span", DEFAULT_SPAN)
+def _params(cfg: RunConfig) -> float:
+    raw_l = cfg.param(NAME, "L", DEFAULT_L)
     try:
-        top_delta = float(raw_top_delta)
-        span = float(raw_span)
+        l_value = float(raw_l)
     except (TypeError, ValueError) as exc:
-        raise ValueError("F-MonSTER params 'top_delta' and 'span' must be numeric.") from exc
-    if top_delta <= 0:
-        raise ValueError("F-MonSTER param 'top_delta' must be positive.")
-    if span <= 0:
-        raise ValueError("F-MonSTER param 'span' must be positive.")
-    return top_delta, span
+        raise ValueError("F-MonSTER param 'L' must be numeric.") from exc
+    if l_value <= 0:
+        raise ValueError("F-MonSTER param 'L' must be positive.")
+    return l_value
 
 
 def validate_config(cfg: RunConfig) -> RequirementCheck:
     try:
-        top_delta, span = _params(cfg)
+        l_value = _params(cfg)
     except ValueError as exc:
         return RequirementCheck(ok=False, rule=str(exc))
 
     ok = cfg.dim % 4 == 0
     return RequirementCheck(
         ok=ok,
-        rule=f"dim % 4 == 0; top_delta={top_delta}, span={span}",
+        rule=f"dim % 4 == 0; L={l_value}",
     )
 
 
@@ -74,18 +69,17 @@ def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
     if cfg.dim % 4 != 0:
         raise ValueError("F-MonSTER requires dim divisible by 4.")
 
-    top_delta, span = _params(cfg)
+    l_value = _params(cfg)
     num_freq = cfg.dim // 4
     inv_freq = base_frequencies(num_freq, cfg.theta_base)
-    unit = 1.0 # span / top_delta
 
     axis = _fibonacci_sphere(num_freq)  # (F,3)
     t = positions_4d[:, 0:1]  # (P,1)
     spatial = positions_4d[:, 1:4]  # (P,3)
 
-    phi = t * unit * inv_freq[None, :]  # (P,F)
+    phi = (t * l_value) * inv_freq[None, :]  # (P,F)
     proj = spatial @ axis.T  # (P,F)
-    theta = proj * unit * inv_freq[None, :]  # (P,F)
+    theta = proj * inv_freq[None, :]  # (P,F)
 
     return Cache(
         positions=positions_4d,

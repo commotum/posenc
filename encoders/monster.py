@@ -9,8 +9,7 @@ from core.types import EncoderSpec, PositionBank, RequirementCheck, RunConfig
 
 
 NAME = "monster"
-DEFAULT_TOP_DELTA = 1024.0
-DEFAULT_SPAN = 2.0 * np.pi
+DEFAULT_L = 1.0 / 4096.0
 
 
 @dataclass(frozen=True)
@@ -23,31 +22,27 @@ class Cache:
     s_axes: np.ndarray  # (P, F, 3)
 
 
-def _params(cfg: RunConfig) -> tuple[float, float]:
-    raw_top_delta = cfg.param(NAME, "top_delta", DEFAULT_TOP_DELTA)
-    raw_span = cfg.param(NAME, "span", DEFAULT_SPAN)
+def _params(cfg: RunConfig) -> float:
+    raw_l = cfg.param(NAME, "L", DEFAULT_L)
     try:
-        top_delta = float(raw_top_delta)
-        span = float(raw_span)
+        l_value = float(raw_l)
     except (TypeError, ValueError) as exc:
-        raise ValueError("MonSTER params 'top_delta' and 'span' must be numeric.") from exc
-    if top_delta <= 0:
-        raise ValueError("MonSTER param 'top_delta' must be positive.")
-    if span <= 0:
-        raise ValueError("MonSTER param 'span' must be positive.")
-    return top_delta, span
+        raise ValueError("MonSTER param 'L' must be numeric.") from exc
+    if l_value <= 0:
+        raise ValueError("MonSTER param 'L' must be positive.")
+    return l_value
 
 
 def validate_config(cfg: RunConfig) -> RequirementCheck:
     try:
-        top_delta, span = _params(cfg)
+        l_value = _params(cfg)
     except ValueError as exc:
         return RequirementCheck(ok=False, rule=str(exc))
 
     ok = cfg.dim % 12 == 0
     return RequirementCheck(
         ok=ok,
-        rule=f"dim % 12 == 0; top_delta={top_delta}, span={span}",
+        rule=f"dim % 12 == 0; L={l_value}",
     )
 
 
@@ -56,13 +51,12 @@ def precompute(cfg: RunConfig, bank: PositionBank) -> Cache:
     if cfg.dim % 12 != 0:
         raise ValueError("MonSTER requires dim divisible by 12.")
 
-    top_delta, span = _params(cfg)
+    l_value = _params(cfg)
     num_freq = cfg.dim // 12
     inv_freq = base_frequencies(num_freq, cfg.theta_base)
-    unit = span / top_delta
 
-    phi = positions_4d[:, 0:1] * unit * inv_freq[None, :]
-    spatial_angles = positions_4d[:, 1:4, None] * unit * inv_freq[None, None, :]  # (P,3,F)
+    phi = (positions_4d[:, 0:1] * l_value) * inv_freq[None, :]
+    spatial_angles = positions_4d[:, 1:4, None] * inv_freq[None, None, :]  # (P,3,F)
     spatial_angles = np.transpose(spatial_angles, (0, 2, 1))  # (P,F,3)
 
     return Cache(
